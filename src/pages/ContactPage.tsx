@@ -143,19 +143,20 @@ const ContactPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-emerald-600 to-blue-600 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-white">
-            <h1 className="text-4xl font-bold mb-4 sm:text-5xl">
-              Liên Hệ Với Chúng Tôi
-            </h1>
-            <p className="text-xl opacity-90 max-w-3xl mx-auto">
-              Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn. 
-              Đừng ngần ngại liên hệ nếu bạn có bất kỳ câu hỏi nào.
-            </p>
-          </div>
-        </div>
-      </section>
+      <section className="bg-gray-170 py-16">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="text-center text-black">
+      <h1 className="text-4xl font-bold mb-4 sm:text-5xl">
+        Liên Hệ Với Chúng Tôi
+      </h1>
+      <p className="text-xl opacity-90 max-w-3xl mx-auto">
+        Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn. 
+        Đừng ngần ngại liên hệ nếu bạn có bất kỳ câu hỏi nào.
+      </p>
+    </div>
+  </div>
+</section>
+
 
       {/* Success Message */}
       {isSubmitted && (

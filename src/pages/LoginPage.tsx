@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router";
 import { Mail, Lock, Eye, EyeOff, Key } from "lucide-react";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [formData, setFormData] = useState({
@@ -12,6 +13,26 @@ const LoginPage = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // Lấy redirect URL từ query parameters
+  const getRedirectUrl = () => {
+    const params = new URLSearchParams(location.search);
+    return params.get('redirect') || '/';
+  };
+
+  // Tự động điền email nếu đã chọn "Ghi nhớ đăng nhập" trước đó
+  useEffect(() => {
+    const remembered = localStorage.getItem('rememberMe');
+    const savedEmail = localStorage.getItem('userEmail');
+    
+    if (remembered === 'true' && savedEmail) {
+      setFormData(prev => ({
+        ...prev,
+        email: savedEmail
+      }));
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,42 +48,46 @@ const LoginPage = () => {
     setTimeout(() => {
       setIsSubmitting(false);
       
-      // Lấy thông tin user từ localStorage
-      const storedUser = localStorage.getItem('user');
+      // Lấy danh sách users từ localStorage
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
       
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
+      // Tìm user với email và password khớp
+      const foundUser = users.find(
+        (user: any) => 
+          user.email === formData.email && 
+          user.password === formData.password
+      );
+      
+      if (foundUser) {
+        // Lưu thông tin đăng nhập hiện tại
+        const loggedInUser = {
+          id: foundUser.id,
+          fullName: foundUser.fullName,
+          email: foundUser.email,
+          role: foundUser.role,
+          isLoggedIn: true,
+          token: `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          lastLogin: new Date().toISOString()
+        };
         
-        // Kiểm tra email và password
-        if (user.email === formData.email && user.password === formData.password) {
-          // Lưu thông tin đăng nhập vào localStorage
-          const loggedInUser = {
-            fullName: user.fullName,
-            email: user.email,
-            isLoggedIn: true
-          };
-          
-          localStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
-          
-          alert(`Đăng nhập thành công! Chào mừng ${user.fullName}`);
-          navigate("/");
+        localStorage.setItem('currentUser', JSON.stringify(loggedInUser));
+        
+        // Nếu chọn "Ghi nhớ đăng nhập", lưu email vào localStorage
+        if (rememberMe) {
+          localStorage.setItem('rememberMe', 'true');
+          localStorage.setItem('userEmail', formData.email);
         } else {
-          setError("Email hoặc mật khẩu không chính xác");
+          localStorage.removeItem('rememberMe');
+          localStorage.removeItem('userEmail');
         }
+        
+        alert(`Đăng nhập thành công! Chào mừng ${foundUser.fullName}`);
+        
+        // Chuyển hướng đến URL được chỉ định hoặc trang chủ
+        const redirectUrl = getRedirectUrl();
+        navigate(redirectUrl);
       } else {
-        // Nếu chưa có user đăng ký, kiểm tra tài khoản demo
-        if (formData.email === "demo@example.com" && formData.password === "Demo@123") {
-          const demoUser = {
-            fullName: "Nguyễn Văn Demo",
-            email: formData.email,
-            isLoggedIn: true
-          };
-          localStorage.setItem('loggedInUser', JSON.stringify(demoUser));
-          alert("Đăng nhập thành công!");
-          navigate("/");
-        } else {
-          setError("Email hoặc mật khẩu không chính xác");
-        }
+        setError("Email hoặc mật khẩu không chính xác");
       }
     }, 1500);
   };

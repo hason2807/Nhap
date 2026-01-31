@@ -16,6 +16,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { useState } from "react";
+import { generateCourseImage } from "../utils/imageGenerator"; // Thêm import
 
 const BlogDetailPage = () => {
   const [liked, setLiked] = useState(false);
@@ -56,6 +57,7 @@ const BlogDetailPage = () => {
     readTime: "8 phút đọc",
     category: "Lập Trình",
     tags: ["React", "Node.js", "Fullstack", "Lộ trình", "Web Development"],
+    image: "react",
     views: 2456,
     comments: 42,
     likes: 312,
@@ -64,9 +66,9 @@ const BlogDetailPage = () => {
 
   // Related posts
   const relatedPosts = [
-    { id: 2, title: "10 Xu hướng Digital Marketing năm 2024", category: "Marketing" },
-    { id: 3, title: "Thiết kế UI/UX cho người mới bắt đầu", category: "Thiết Kế" },
-    { id: 4, title: "Cách xây dựng startup thành công", category: "Kinh Doanh" },
+    { id: 2, title: "10 Xu hướng Digital Marketing năm 2024", category: "Marketing", image: "marketing" },
+    { id: 3, title: "Thiết kế UI/UX cho người mới bắt đầu", category: "Thiết Kế", image: "design" },
+    { id: 4, title: "Cách xây dựng startup thành công", category: "Kinh Doanh", image: "business" },
   ];
 
   // Comments
@@ -160,9 +162,14 @@ const BlogDetailPage = () => {
           {/* Article Content */}
           <div className="lg:col-span-2">
             <article className="bg-white rounded-xl shadow-sm p-8 mb-8">
-              {/* Featured Image */}
-              <div className="mb-8 h-64 bg-gradient-to-br from-emerald-400 to-blue-400 rounded-xl flex items-center justify-center">
-                <BookOpen className="h-24 w-24 text-white opacity-80" />
+              {/* Featured Image - Đã sửa */}
+              <div className="mb-8 h-64 rounded-xl overflow-hidden relative">
+                <img 
+                  src={generateCourseImage(blogPost.image)}
+                  alt={blogPost.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
               </div>
               
               {/* Content */}
@@ -304,15 +311,26 @@ const BlogDetailPage = () => {
                     to={`/blog/${post.id}`}
                     className="block p-4 rounded-lg border hover:border-emerald-300 hover:bg-emerald-50 transition-colors group"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                        {post.category}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-emerald-600" />
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0">
+                        <img 
+                          src={generateCourseImage(post.image)}
+                          alt={post.title}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
+                            {post.category}
+                          </span>
+                          <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-emerald-600" />
+                        </div>
+                        <h4 className="font-medium text-sm group-hover:text-emerald-600 line-clamp-2">
+                          {post.title}
+                        </h4>
+                      </div>
                     </div>
-                    <h4 className="font-medium group-hover:text-emerald-600">
-                      {post.title}
-                    </h4>
                   </Link>
                 ))}
               </div>

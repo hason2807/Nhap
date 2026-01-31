@@ -3,7 +3,7 @@ import { Facebook, Youtube, Instagram } from "lucide-react";
 
 function Footer() {
   return (
-    <footer className="bg-emerald-700 text-white mt-16">
+    <footer className="bg-emerald-700 text-white"> {/* Bỏ mt-16 */}
       <div className="max-w-7xl mx-auto px-4 py-10">
 
         {/* Top */}

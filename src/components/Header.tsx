@@ -1,6 +1,9 @@
 import { Link, useLocation, useNavigate } from "react-router";
-import { useState, useEffect } from "react";
-import { Search, Menu, X, ShoppingCart, User, ChevronDown, } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, Menu, X, ShoppingCart, User, ChevronDown, Bell, LogOut, Clock, BookOpen } from "lucide-react";
+import { useCart } from "../context/CartContext";
+import { courses } from "../data/courses";
+import { generateCourseImage } from "../utils/imageGenerator"; // Thêm import này
 
 function Header() {
   const [user, setUser] = useState<any>(null);
@@ -8,37 +11,72 @@ function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const cartCount = 3;
+  const { cartCount } = useCart();
+  const searchRef = useRef<HTMLDivElement>(null);
 
-  // Check if user is logged in on component mount and route changes
+  const notificationCount = 0;
+
+  // Lấy recent searches từ localStorage
+  useEffect(() => {
+    const savedSearches = localStorage.getItem('recentSearches');
+    if (savedSearches) {
+      try {
+        setRecentSearches(JSON.parse(savedSearches));
+      } catch (error) {
+        console.error("Error parsing recent searches:", error);
+      }
+    }
+  }, []);
+
+  // Lấy search query từ URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const searchParam = params.get('search');
+    if (searchParam && location.pathname === '/courses') {
+      const decodedSearch = decodeURIComponent(searchParam);
+      setSearchQuery(decodedSearch);
+      
+      // Thêm vào recent searches
+      if (decodedSearch.trim()) {
+        addToRecentSearches(decodedSearch.trim());
+      }
+    }
+  }, [location]);
+
+  // Kiểm tra đăng nhập
   useEffect(() => {
     const checkLoggedInUser = () => {
-      const loggedInUser = localStorage.getItem('loggedInUser');
+      const loggedInUser = localStorage.getItem('currentUser');
       if (loggedInUser) {
-        setUser(JSON.parse(loggedInUser));
+        try {
+          const userData = JSON.parse(loggedInUser);
+          if (userData.isLoggedIn) {
+            setUser(userData);
+          } else {
+            setUser(null);
+            localStorage.removeItem('currentUser');
+          }
+        } catch (error) {
+          console.error("Error parsing user data:", error);
+          localStorage.removeItem('currentUser');
+          setUser(null);
+        }
       } else {
         setUser(null);
       }
     };
 
     checkLoggedInUser();
-    
-    // Listen for storage changes (for logout from other tabs/windows)
-    const handleStorageChange = () => {
-      checkLoggedInUser();
-    };
+    window.addEventListener('storage', checkLoggedInUser);
+    return () => window.removeEventListener('storage', checkLoggedInUser);
+  }, [location]);
 
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [location]); // Re-run when location changes
-
-  // Track scroll for header shadow
+  // Track scroll
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
@@ -47,24 +85,90 @@ function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
-    const handleClickOutside = () => {
-      setShowUserDropdown(false);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showUserDropdown && !(e.target as Element).closest('.user-dropdown')) {
+        setShowUserDropdown(false);
+      }
+      if (showSearchSuggestions && searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSearchSuggestions(false);
+      }
     };
-    if (showUserDropdown) {
-      document.addEventListener("click", handleClickOutside);
-      return () => document.removeEventListener("click", handleClickOutside);
+    
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [showUserDropdown, showSearchSuggestions]);
+
+  // Generate search suggestions khi search query thay đổi
+  useEffect(() => {
+    if (searchQuery.trim() && !showSearchSuggestions) {
+      setShowSearchSuggestions(true);
     }
-  }, [showUserDropdown]);
+
+    if (searchQuery.trim()) {
+      const filtered = courses
+        .filter(course => 
+          course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          course.instructor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          course.category.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .slice(0, 5); // Giới hạn 5 kết quả
+      
+      setSearchSuggestions(filtered);
+    } else {
+      setSearchSuggestions([]);
+    }
+  }, [searchQuery]);
+
+  // Hàm thêm vào recent searches
+  const addToRecentSearches = (query: string) => {
+    if (!query.trim()) return;
+    
+    const newSearches = [
+      query,
+      ...recentSearches.filter(s => s.toLowerCase() !== query.toLowerCase())
+    ].slice(0, 5); // Giữ tối đa 5 searches
+    
+    setRecentSearches(newSearches);
+    localStorage.setItem('recentSearches', JSON.stringify(newSearches));
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem('loggedInUser');
+    localStorage.removeItem('currentUser');
     setUser(null);
     setShowUserDropdown(false);
     setOpenMenu(false);
     navigate("/login");
     alert("Đã đăng xuất thành công!");
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      addToRecentSearches(searchQuery.trim());
+      navigate(`/courses?search=${encodeURIComponent(searchQuery)}`);
+      setShowSearchSuggestions(false);
+    } else {
+      navigate('/courses');
+    }
+  };
+
+  const handleQuickSearch = (query: string) => {
+    setSearchQuery(query);
+    addToRecentSearches(query);
+    navigate(`/courses?search=${encodeURIComponent(query)}`);
+    setShowSearchSuggestions(false);
+  };
+
+  const handleCourseClick = (courseId: number) => {
+    navigate(`/courses/${courseId}`);
+    setShowSearchSuggestions(false);
+  };
+
+  const handleClearRecentSearches = () => {
+    setRecentSearches([]);
+    localStorage.removeItem('recentSearches');
   };
 
   const navItems = [
@@ -75,20 +179,15 @@ function Header() {
     { path: "/contact", label: "Liên hệ" },
   ];
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/courses?search=${encodeURIComponent(searchQuery)}`);
-    }
-  };
-
-  // Get user's first name or display name
   const getUserDisplayName = () => {
     if (!user || !user.fullName) return "Người dùng";
-    
-    // Lấy tên đầu tiên từ fullName
     const names = user.fullName.split(' ');
-    return names[names.length - 1]; // Lấy họ (hoặc tên cuối cùng)
+    return names[0];
+  };
+
+  const getUserInitial = () => {
+    if (!user || !user.fullName) return "U";
+    return user.fullName.charAt(0).toUpperCase();
   };
 
   return (
@@ -148,37 +247,186 @@ function Header() {
               ))}
             </nav>
 
-            {/* Search desktop */}
+            {/* Search desktop with suggestions */}
             <div className="hidden lg:flex items-center flex-1 max-w-md mx-4">
-              <form onSubmit={handleSearch} className="relative w-full">
-                <div className="flex items-center border border-gray-300 rounded-full px-4 py-2.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200 transition-all">
-                  <Search size={18} className="text-gray-500" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Tìm khóa học, giảng viên..."
-                    className="ml-3 outline-none text-sm w-full bg-transparent"
-                  />
-                  {searchQuery && (
+              <div ref={searchRef} className="relative w-full">
+                <form onSubmit={handleSearch}>
+                  <div className="flex items-center border border-gray-300 rounded-full px-4 py-2.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200 transition-all">
+                    <Search size={18} className="text-gray-500" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={() => setShowSearchSuggestions(true)}
+                      placeholder="Tìm khóa học, giảng viên..."
+                      className="ml-3 outline-none text-sm w-full bg-transparent"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        className="ml-2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
                     <button
-                      type="button"
-                      onClick={() => setSearchQuery("")}
-                      className="ml-2 text-gray-400 hover:text-gray-600"
+                      type="submit"
+                      className="ml-2 p-1.5 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 transition-colors"
+                      title="Tìm kiếm khóa học"
                     >
-                      <X size={16} />
+                      <Search size={14} />
                     </button>
-                  )}
-                </div>
-              </form>
+                  </div>
+                </form>
+
+                {/* Search Suggestions Dropdown */}
+                {showSearchSuggestions && (searchQuery || recentSearches.length > 0) && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border overflow-hidden z-50">
+                    {searchQuery ? (
+                      <>
+                        {/* Search Results */}
+                        {searchSuggestions.length > 0 ? (
+                          <>
+                            <div className="px-4 py-2 border-b bg-gray-50">
+                              <p className="text-xs font-medium text-gray-600">KẾT QUẢ TÌM KIẾM</p>
+                            </div>
+                            <div className="max-h-80 overflow-y-auto">
+                              {searchSuggestions.map(course => (
+                                <div
+                                  key={course.id}
+                                  className="flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                                  onClick={() => handleCourseClick(course.id)}
+                                >
+                                  {/* Sử dụng generateCourseImage thay vì icon */}
+                                  <div className="h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 mr-3">
+                                    <img 
+                                      src={generateCourseImage(course.image)} 
+                                      alt={course.title}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm text-gray-900 line-clamp-1">
+                                      {course.title}
+                                    </p>
+                                    <div className="flex items-center mt-1">
+                                      <span className="text-xs text-gray-500">{course.instructor}</span>
+                                      <span className="mx-2 text-gray-300">•</span>
+                                      <span className="text-xs text-gray-500">{course.category}</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-right ml-2">
+                                    <div className="text-sm font-semibold text-emerald-600">
+                                      {course.price.toLocaleString()}₫
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {course.students.toLocaleString()} học viên
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="border-t">
+                              <button
+                                onClick={() => handleQuickSearch(searchQuery)}
+                                className="w-full p-3 text-emerald-600 hover:bg-emerald-50 font-medium text-sm text-center"
+                              >
+                                <Search size={14} className="inline mr-2" />
+                                Xem tất cả kết quả cho "{searchQuery}"
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="p-6 text-center">
+                            <Search size={32} className="text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-600 font-medium">Không tìm thấy kết quả</p>
+                            <p className="text-sm text-gray-500 mt-1">
+                              Không có khóa học nào phù hợp với "{searchQuery}"
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {/* Recent Searches */}
+                        <div className="px-4 py-2 border-b bg-gray-50">
+                          <div className="flex justify-between items-center">
+                            <p className="text-xs font-medium text-gray-600">TÌM KIẾM GẦN ĐÂY</p>
+                            {recentSearches.length > 0 && (
+                              <button
+                                onClick={handleClearRecentSearches}
+                                className="text-xs text-gray-500 hover:text-gray-700"
+                              >
+                                Xóa tất cả
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {recentSearches.length > 0 ? (
+                          <div className="py-2">
+                            {recentSearches.map((search, index) => (
+                              <button
+                                key={index}
+                                onClick={() => handleQuickSearch(search)}
+                                className="flex items-center w-full p-3 hover:bg-gray-50 text-left"
+                              >
+                                <Clock size={16} className="text-gray-400 mr-3" />
+                                <span className="text-sm text-gray-700">{search}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-6 text-center">
+                            <Clock size={24} className="text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">Chưa có tìm kiếm gần đây</p>
+                          </div>
+                        )}
+                        {/* Popular Searches */}
+                        <div className="px-4 py-2 border-t border-b bg-gray-50">
+                          <p className="text-xs font-medium text-gray-600">TÌM KIẾM PHỔ BIẾN</p>
+                        </div>
+                        <div className="p-3">
+                          <div className="flex flex-wrap gap-2">
+                            {['React', 'JavaScript', 'Python', 'Marketing', 'Thiết kế'].map((term, index) => (
+                              <button
+                                key={index}
+                                onClick={() => handleQuickSearch(term)}
+                                className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-full transition-colors"
+                              >
+                                {term}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Right */}
             <div className="flex items-center gap-2 md:gap-3">
               {/* Search mobile */}
-              <button className="lg:hidden p-2 text-gray-600 hover:text-emerald-600">
+              <button 
+                className="lg:hidden p-2 text-gray-600 hover:text-emerald-600"
+                onClick={() => navigate('/courses')}
+                title="Tìm kiếm khóa học"
+              >
                 <Search size={20} />
               </button>
+
+              {/* Notification */}
+              <button className="relative p-2 text-gray-600 hover:text-emerald-600 transition-colors">
+                <Bell size={20} />
+                {notificationCount > 0 && (
+                  <span className="absolute top-1 right-1 h-4 w-4 bg-rose-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {notificationCount}
+                  </span>
+                )}
+              </button>
+
               {/* Cart */}
               <Link 
                 to="/cart" 
@@ -187,10 +435,11 @@ function Header() {
                 <ShoppingCart size={20} />
                 {cartCount > 0 && (
                   <span className="absolute top-1 right-1 h-5 w-5 bg-emerald-600 text-white text-xs rounded-full flex items-center justify-center font-medium">
-                    {cartCount}
+                    {cartCount > 9 ? "9+" : cartCount}
                   </span>
                 )}
               </Link>
+
               {/* User/Auth */}
               {!user ? (
                 <div className="hidden md:flex items-center gap-2">
@@ -208,7 +457,7 @@ function Header() {
                   </Link>
                 </div>
               ) : (
-                <div className="relative">
+                <div className="relative user-dropdown">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -218,7 +467,7 @@ function Header() {
                   >
                     <div className="h-8 w-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
                       <span className="text-white text-xs font-semibold">
-                        {getUserDisplayName().charAt(0).toUpperCase()}
+                        {getUserInitial()}
                       </span>
                     </div>
                     <ChevronDown 
@@ -229,37 +478,46 @@ function Header() {
                   
                   {/* User dropdown */}
                   {showUserDropdown && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border py-2 z-50">
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border py-2 z-50">
                       <div className="px-4 py-3 border-b">
-                        <p className="font-semibold text-sm">{user.fullName}</p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
+                        <p className="font-semibold text-sm text-gray-900">{user.fullName}</p>
+                        <p className="text-xs text-gray-500 mt-1">{user.email}</p>
+                        <div className="mt-2 flex items-center">
+                          <span className="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs rounded-full">
+                            {user.role === "student" ? "Học viên" : user.role}
+                          </span>
+                        </div>
                       </div>
                       <Link 
                         to="/profile" 
-                        className="block px-4 py-2 hover:bg-gray-50 text-sm"
+                        className="flex items-center px-4 py-3 hover:bg-gray-50 text-sm text-gray-700"
                         onClick={() => setShowUserDropdown(false)}
                       >
+                        <User size={16} className="mr-3" />
                         Hồ sơ của tôi
                       </Link>
                       <Link 
                         to="/my-courses" 
-                        className="block px-4 py-2 hover:bg-gray-50 text-sm"
+                        className="flex items-center px-4 py-3 hover:bg-gray-50 text-sm text-gray-700"
                         onClick={() => setShowUserDropdown(false)}
                       >
+                        <span className="mr-3">📚</span>
                         Khóa học của tôi
                       </Link>
                       <Link 
-                        to="/settings" 
-                        className="block px-4 py-2 hover:bg-gray-50 text-sm"
+                        to="/cart" 
+                        className="flex items-center px-4 py-3 hover:bg-gray-50 text-sm text-gray-700"
                         onClick={() => setShowUserDropdown(false)}
                       >
-                        Cài đặt
+                        <ShoppingCart size={16} className="mr-3" />
+                        Giỏ hàng ({cartCount})
                       </Link>
                       <div className="border-t mt-2 pt-2">
                         <button 
                           onClick={handleLogout}
-                          className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 text-sm"
+                          className="flex items-center w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 text-sm"
                         >
+                          <LogOut size={16} className="mr-3" />
                           Đăng xuất
                         </button>
                       </div>
@@ -319,37 +577,19 @@ function Header() {
           </button>
         </div>
 
-        {/* User info in mobile menu */}
-        {user && (
-          <div className="p-6 border-b bg-emerald-50">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                <span className="text-white font-semibold">
-                  {getUserDisplayName().charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900">{user.fullName}</p>
-                <p className="text-sm text-gray-600">{user.email}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Search mobile */}
+        {/* Search mobile in menu */}
         <div className="p-6 border-b">
-          <form onSubmit={handleSearch} className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm khóa học..."
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-            />
-            <Search 
-              size={20} 
-              className="absolute right-4 top-3.5 text-gray-400" 
-            />
+          <form onSubmit={handleSearch}>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm khóa học..."
+                className="w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+              />
+              <Search size={20} className="absolute left-3 top-3.5 text-gray-400" />
+            </div>
           </form>
         </div>
 
@@ -408,6 +648,14 @@ function Header() {
                 >
                   <span className="mr-3">📚</span>
                   Khóa học của tôi
+                </Link>
+                <Link
+                  to="/cart"
+                  onClick={() => setOpenMenu(false)}
+                  className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-50"
+                >
+                  <ShoppingCart className="h-4 w-4 mr-3" />
+                  Giỏ hàng ({cartCount})
                 </Link>
                 <button
                   onClick={() => {

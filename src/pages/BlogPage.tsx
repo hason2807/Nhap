@@ -15,6 +15,7 @@ import {
   Share2,
   Heart
 } from "lucide-react";
+import { generateCourseImage } from "../utils/imageGenerator"; // Thêm import
 
 const BlogPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -154,33 +155,33 @@ const BlogPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-emerald-600 to-blue-600 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-white">
-            <h1 className="text-4xl font-bold mb-4 sm:text-5xl">
-              Blog Học Tập & Phát Triển
-            </h1>
-            <p className="text-xl opacity-90 mb-8 max-w-3xl mx-auto">
-              Khám phá kiến thức, chia sẻ kinh nghiệm và cập nhật xu hướng mới nhất 
-              trong giáo dục và phát triển kỹ năng
-            </p>
-            
-            {/* Search Bar */}
-            <div className="max-w-2xl mx-auto">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Tìm kiếm bài viết, chủ đề hoặc tác giả..."
-                  className="w-full pl-12 pr-4 py-3 rounded-lg border-0 focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-            </div>
-          </div>
+<section className="bg-gray-170 py-16">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="text-center">
+      <h1 className="text-4xl font-bold mb-4 text-gray-900 sm:text-5xl">
+        Blog Học Tập & Phát Triển
+      </h1>
+      <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+        Khám phá kiến thức, chia sẻ kinh nghiệm và cập nhật xu hướng mới nhất 
+        trong giáo dục và phát triển kỹ năng
+      </p>
+      
+      {/* Search Bar */}
+      <div className="max-w-2xl mx-auto">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tìm kiếm bài viết, chủ đề hoặc tác giả..."
+            className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          />
         </div>
-      </section>
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -209,11 +210,14 @@ const BlogPage = () => {
                     <article key={post.id} className="group">
                       <Link to={`/blog/${post.id}`}>
                         <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow">
-                          {/* Image */}
-                          <div className="h-48 bg-gradient-to-br from-emerald-400 to-blue-400 relative">
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <BookOpen className="h-16 w-16 text-white opacity-80" />
-                            </div>
+                          {/* Image - Đã sửa */}
+                          <div className="h-48 relative">
+                            <img 
+                              src={generateCourseImage(post.image)}
+                              alt={post.title}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                             <div className="absolute top-3 left-3">
                               <span className="bg-emerald-600 text-white text-xs px-3 py-1 rounded-full">
                                 {post.category}
@@ -284,13 +288,16 @@ const BlogPage = () => {
                 {filteredPosts.map((post) => (
                   <article key={post.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                     <div className="md:flex">
-                      {/* Image */}
+                      {/* Image - Đã sửa */}
                       <div className="md:w-2/5">
                         <Link to={`/blog/${post.id}`}>
-                          <div className="h-48 md:h-full bg-gradient-to-br from-emerald-400 to-blue-400 relative group">
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <BookOpen className="h-16 w-16 text-white opacity-80 group-hover:scale-110 transition-transform" />
-                            </div>
+                          <div className="h-48 md:h-full relative group">
+                            <img 
+                              src={generateCourseImage(post.image)}
+                              alt={post.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                             <div className="absolute top-3 left-3">
                               <span className="bg-emerald-600 text-white text-xs px-3 py-1 rounded-full">
                                 {post.category}

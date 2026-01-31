@@ -48,6 +48,13 @@ const RegisterPage = () => {
       newErrors.email = "Vui lòng nhập email";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Email không hợp lệ";
+    } else {
+      // Check if email already exists
+      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const emailExists = existingUsers.some((user: any) => user.email === formData.email);
+      if (emailExists) {
+        newErrors.email = "Email đã được đăng ký";
+      }
     }
 
     if (!formData.password) {
@@ -87,17 +94,25 @@ const RegisterPage = () => {
     setTimeout(() => {
       setIsSubmitting(false);
       
-      // Lưu thông tin user vào localStorage
-      const userData = {
+      // Lấy danh sách users hiện có
+      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      
+      // Tạo user mới với ID duy nhất
+      const newUser = {
+        id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         fullName: formData.fullName,
         email: formData.email,
-        password: formData.password // Trong thực tế nên mã hóa
+        password: formData.password,
+        createdAt: new Date().toISOString(),
+        role: "student"
       };
       
-      localStorage.setItem('user', JSON.stringify(userData));
+      // Thêm user mới vào danh sách
+      existingUsers.push(newUser);
+      localStorage.setItem('users', JSON.stringify(existingUsers));
       
       alert(`Đăng ký thành công! Chào mừng ${formData.fullName}. Vui lòng đăng nhập.`);
-      navigate("/login"); // Chuyển đến trang login
+      navigate("/login");
     }, 1500);
   };
 
@@ -290,5 +305,4 @@ const RegisterPage = () => {
     </div>
   );
 };
-
 export default RegisterPage;
