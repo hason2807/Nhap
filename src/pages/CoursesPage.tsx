@@ -3,7 +3,7 @@ import { courses, categories } from "../data/courses";
 import { generateCourseImage } from "../utils/imageGenerator";
 import { Link, useNavigate } from "react-router";
 import { useCart } from "../context/CartContext";
-import { ShoppingCart, CheckCircle, Star, Users, Clock, Filter, Search } from "lucide-react";
+import { ShoppingCart, CheckCircle, Star, Clock, Filter, Search } from "lucide-react";
 
 const PAGE_SIZE = 9;
 

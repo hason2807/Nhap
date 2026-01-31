@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, } from "react-router";
 import { Play, Clock, Award, BookOpen, BarChart, Calendar, Download, Search, FolderOpen, Lock, ChevronRight, Star, CheckCircle, AlertCircle } from "lucide-react";
 import { getPurchasedCourses, updateCourseProgress, removePurchasedCourse, type Purchase } from "../utils/purchasesUtils";
 
@@ -21,7 +21,6 @@ interface Course {
 }
 
 const MyCoursesPage = () => {
-  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [myCourses, setMyCourses] = useState<Course[]>([]);
