@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router";
 import { useState, useEffect, useRef } from "react";
-import { Search, Menu, X, ShoppingCart, User, ChevronDown, Bell, LogOut, Clock, BookOpen } from "lucide-react";
+import { Search, Menu, X, ShoppingCart, User, ChevronDown, Bell, LogOut, Clock, } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { courses } from "../data/courses";
 import { generateCourseImage } from "../utils/imageGenerator"; // Thêm import này
@@ -178,18 +178,10 @@ function Header() {
     { path: "/blog", label: "Blog" },
     { path: "/contact", label: "Liên hệ" },
   ];
-
-  const getUserDisplayName = () => {
-    if (!user || !user.fullName) return "Người dùng";
-    const names = user.fullName.split(' ');
-    return names[0];
-  };
-
   const getUserInitial = () => {
     if (!user || !user.fullName) return "U";
     return user.fullName.charAt(0).toUpperCase();
   };
-
   return (
     <>
       {/* HEADER */}
