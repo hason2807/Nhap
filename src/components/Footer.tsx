@@ -18,7 +18,6 @@ function Footer() {
                 phát triển sự nghiệp mọi lúc, mọi nơi.
               </p>
             </div>
-
             {/* Links */}
             <div className="min-w-[120px]">
               <h3 className="font-semibold mb-3 whitespace-nowrap">Liên kết</h3>
