@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router";
 import { useState, useEffect, useRef } from "react";
-import { Search, Menu, X, ShoppingCart, User, ChevronDown, Bell, LogOut, Clock } from "lucide-react";
+import { Search, Menu, X, ShoppingCart, User, ChevronDown, LogOut, Clock } from "lucide-react";
 import { useCartStore } from "../stores/cartStore";
 import { useAuthStore } from "../stores/authStore";
 import { courses } from "../data/courses";
@@ -25,7 +25,6 @@ function Header() {
   
   // ✅ TÍNH CART COUNT TỪ CART ITEMS
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const notificationCount = 0;
 
   // Lấy recent searches từ localStorage
   useEffect(() => {

@@ -144,6 +144,9 @@ const BlogDetailPage = () => {
   ];
 
   return (
+     <>
+      <title>Blog Detail Page</title>
+      <meta name="description" content="Blog Detail Page" />
     <div className="min-h-screen bg-gray-50">
       {/* HEADER - WIDER */}
       <div className="bg-gradient-to-r from-emerald-600 to-blue-600 py-12">
@@ -398,6 +401,7 @@ const BlogDetailPage = () => {
         </div>
       </div>
     </div>
+      </>
   );
 };
 

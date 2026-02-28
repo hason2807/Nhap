@@ -5,22 +5,11 @@ import { useCartStore } from "../stores/cartStore";
 import { useAuthStore } from "../stores/authStore";
 import { usePurchaseStore } from "../stores/purchaseStore";
 
-interface CourseData {
-  id: number;
-  title: string;
-  instructor: string;
-  category: string;
-  lessons: number;
-  duration: string;
-  image: string;
-  price: number;
-}
-
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { cartItems, clearCart, removeFromCart } = useCartStore();
   const { user, isLoggedIn } = useAuthStore();
-  const { addMultiplePurchases, checkPurchased, getPurchasesByUser } = usePurchaseStore();
+  const { addMultiplePurchases, checkPurchased } = usePurchaseStore();
   
   // Form state
   const [formData, setFormData] = useState({

@@ -125,6 +125,9 @@ const LoginPage = () => {
   };
 
   return (
+    <>
+      <title>Login Page</title>
+      <meta name="description" content="Login Page" />
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
         {/* Logo và heading */}
@@ -263,6 +266,7 @@ const LoginPage = () => {
         </div>
       </div>
     </div>
+      </>
   );
 };
 

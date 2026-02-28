@@ -26,16 +26,6 @@ const HomePage = () => {
       duration: course.duration,
     }));
 
-  // Categories data từ dữ liệu courses
-  const categories = [
-    { name: "Lập Trình", icon: "💻", count: courses.filter(c => c.category === "Lập Trình").length, color: "bg-blue-100 text-blue-600" },
-    { name: "Marketing", icon: "📢", count: courses.filter(c => c.category === "Marketing").length, color: "bg-pink-100 text-pink-600" },
-    { name: "Thiết Kế", icon: "🎨", count: courses.filter(c => c.category === "Thiết Kế").length, color: "bg-purple-100 text-purple-600" },
-    { name: "Kinh Doanh", icon: "💼", count: courses.filter(c => c.category === "Kinh Doanh").length, color: "bg-emerald-100 text-emerald-600" },
-    { name: "Ngoại Ngữ", icon: "🌍", count: courses.filter(c => c.category === "Ngoại Ngữ").length, color: "bg-amber-100 text-amber-600" },
-    { name: "Nhiếp Ảnh", icon: "📷", count: courses.filter(c => c.category === "Nhiếp Ảnh").length, color: "bg-gray-100 text-gray-600" },
-  ];
-
   // Stats data tính từ dữ liệu thực
   const totalStudents = courses.reduce((sum, course) => sum + course.students, 0);
   const totalLessons = courses.reduce((sum, course) => sum + course.lessons, 0);

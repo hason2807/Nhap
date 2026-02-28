@@ -3,7 +3,6 @@ import { Link } from "react-router";
 import { 
   Calendar, 
   User, 
-  Clock, 
   Eye, 
   MessageCircle, 
   Search, 
@@ -11,8 +10,6 @@ import {
   BookOpen,
   TrendingUp,
   Award,
-  Share2,
-  Heart,
   ChevronLeft,
   ChevronsLeft,
   ChevronsRight
