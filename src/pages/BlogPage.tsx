@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { 
   Calendar, 
   User, 
   Clock, 
-  Tag, 
   Eye, 
   MessageCircle, 
   Search, 
@@ -13,15 +12,20 @@ import {
   TrendingUp,
   Award,
   Share2,
-  Heart
+  Heart,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight
 } from "lucide-react";
-import { generateCourseImage } from "../utils/imageGenerator"; // Thêm import
+import { generateCourseImage } from "../utils/imageGenerator";
 
 const BlogPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [postsPerPage, setPostsPerPage] = useState(6); // Tăng lên 6 vì grid 2 cột
 
-  // Blog posts data
+  // Blog posts data (giữ nguyên)
   const blogPosts = [
     {
       id: 1,
@@ -132,16 +136,10 @@ const BlogPage = () => {
     { name: "Nhiếp Ảnh", slug: "nhiếp-ảnh", count: blogPosts.filter(post => post.category === "Nhiếp Ảnh").length },
   ];
 
-  // Popular tags
-  const popularTags = [
-    "React", "Node.js", "Fullstack", "Digital Marketing", "UI/UX", 
-    "Startup", "IELTS", "Photography", "Tips", "Tutorial", "Career"
-  ];
-
-  // Featured posts (first 3 featured posts)
+  // Featured posts
   const featuredPosts = blogPosts.filter(post => post.featured).slice(0, 3);
 
-  // Filter posts based on active category and search query
+  // Filter posts
   const filteredPosts = blogPosts.filter(post => {
     const matchesCategory = activeCategory === "all" || 
       post.category.toLowerCase().includes(activeCategory.toLowerCase());
@@ -152,36 +150,50 @@ const BlogPage = () => {
     return matchesCategory && matchesSearch;
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
+  const indexOfLastPost = currentPage * postsPerPage;
+  const indexOfFirstPost = indexOfLastPost - postsPerPage;
+  const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCategory, searchQuery, postsPerPage]);
+
   return (
+     <>
+      <title> Blog Page</title>
+      <meta name="description" content="Blog Page" />
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-<section className="bg-gray-170 py-16">
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div className="text-center">
-      <h1 className="text-4xl font-bold mb-4 text-gray-900 sm:text-5xl">
-        Blog Học Tập & Phát Triển
-      </h1>
-      <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-        Khám phá kiến thức, chia sẻ kinh nghiệm và cập nhật xu hướng mới nhất 
-        trong giáo dục và phát triển kỹ năng
-      </p>
-      
-      {/* Search Bar */}
-      <div className="max-w-2xl mx-auto">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm kiếm bài viết, chủ đề hoặc tác giả..."
-            className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-          />
+      <section className="bg-gray-170 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold mb-4 text-gray-900 sm:text-5xl">
+              Blog Học Tập & Phát Triển
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              Khám phá kiến thức, chia sẻ kinh nghiệm và cập nhật xu hướng mới nhất 
+              trong giáo dục và phát triển kỹ năng
+            </p>
+            
+            {/* Search Bar */}
+            <div className="max-w-2xl mx-auto">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm kiếm bài viết, chủ đề hoặc tác giả..."
+                  className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
+      </section>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -210,7 +222,6 @@ const BlogPage = () => {
                     <article key={post.id} className="group">
                       <Link to={`/blog/${post.id}`}>
                         <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow">
-                          {/* Image - Đã sửa */}
                           <div className="h-48 relative">
                             <img 
                               src={generateCourseImage(post.image)}
@@ -225,7 +236,6 @@ const BlogPage = () => {
                             </div>
                           </div>
                           
-                          {/* Content */}
                           <div className="p-5">
                             <h3 className="font-bold text-lg mb-2 group-hover:text-emerald-600 transition-colors line-clamp-2">
                               {post.title}
@@ -234,7 +244,6 @@ const BlogPage = () => {
                               {post.excerpt}
                             </p>
                             
-                            {/* Meta Info */}
                             <div className="flex items-center justify-between text-xs text-gray-500">
                               <div className="flex items-center gap-2">
                                 <User className="h-3 w-3" />
@@ -256,10 +265,31 @@ const BlogPage = () => {
 
             {/* All Posts */}
             <div>
-              <div className="flex items-center justify-between mb-6">
+              {/* Header với bộ lọc và phân trang */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <h2 className="text-2xl font-bold">Tất Cả Bài Viết</h2>
-                <div className="text-sm text-gray-600">
-                  Hiển thị {filteredPosts.length} bài viết
+                
+                <div className="flex items-center gap-4">
+                  {/* Dropdown chọn số bài hiển thị */}
+                  <select
+                    value={postsPerPage}
+                    onChange={(e) => setPostsPerPage(Number(e.target.value))}
+                    className="px-3 py-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value={4}>4 bài / trang</option>
+                    <option value={6}>6 bài / trang</option>
+                    <option value={8}>8 bài / trang</option>
+                    <option value={12}>12 bài / trang</option>
+                  </select>
+                  
+                  {/* Hiển thị số lượng bài */}
+                  <div className="text-sm text-gray-600">
+                    {filteredPosts.length > 0 ? (
+                      <>Hiển thị {indexOfFirstPost + 1}-{Math.min(indexOfLastPost, filteredPosts.length)} / {filteredPosts.length} bài</>
+                    ) : (
+                      <>Không có bài viết</>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -283,112 +313,57 @@ const BlogPage = () => {
                 ))}
               </div>
 
-              {/* Posts Grid */}
-              <div className="space-y-8">
-                {filteredPosts.map((post) => (
+              {/* Posts Grid - Dạng grid 2 cột */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {currentPosts.map((post) => (
                   <article key={post.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="md:flex">
-                      {/* Image - Đã sửa */}
-                      <div className="md:w-2/5">
-                        <Link to={`/blog/${post.id}`}>
-                          <div className="h-48 md:h-full relative group">
-                            <img 
-                              src={generateCourseImage(post.image)}
-                              alt={post.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                            <div className="absolute top-3 left-3">
-                              <span className="bg-emerald-600 text-white text-xs px-3 py-1 rounded-full">
-                                {post.category}
-                              </span>
-                            </div>
-                            {post.featured && (
-                              <div className="absolute top-3 right-3">
-                                <span className="bg-yellow-500 text-white text-xs px-3 py-1 rounded-full">
-                                  ⭐ Nổi bật
-                                </span>
-                              </div>
-                            )}
+                    <Link to={`/blog/${post.id}`}>
+                      {/* Image */}
+                      <div className="h-40 relative">
+                        <img 
+                          src={generateCourseImage(post.image)}
+                          alt={post.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 left-2">
+                          <span className="bg-emerald-600 text-white text-xs px-2 py-0.5 rounded-full">
+                            {post.category}
+                          </span>
+                        </div>
+                        {post.featured && (
+                          <div className="absolute top-2 right-2">
+                            <span className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full">
+                              ⭐ Nổi bật
+                            </span>
                           </div>
-                        </Link>
+                        )}
                       </div>
-
+                      
                       {/* Content */}
-                      <div className="md:w-3/5 p-6">
-                        <div className="mb-4">
-                          <Link to={`/blog/${post.id}`}>
-                            <h3 className="text-xl font-bold mb-2 hover:text-emerald-600 transition-colors">
-                              {post.title}
-                            </h3>
-                          </Link>
-                          <p className="text-gray-600 mb-4">
-                            {post.excerpt}
-                          </p>
+                      <div className="p-3">
+                        <h3 className="font-bold text-sm mb-1 line-clamp-2 hover:text-emerald-600">
+                          {post.title}
+                        </h3>
+                        
+                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                          <User className="h-3 w-3" />
+                          <span className="truncate">{post.author}</span>
+                          <span>•</span>
+                          <Calendar className="h-3 w-3" />
+                          <span>{post.date}</span>
                         </div>
-
-                        {/* Meta Info */}
-                        <div className="space-y-3">
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                            <div className="flex items-center gap-1">
-                              <User className="h-4 w-4" />
-                              <span>{post.author}</span>
-                              <span className="text-xs text-gray-400">({post.authorRole})</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              <span>{post.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              <span>{post.readTime}</span>
-                            </div>
+                        
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2 text-gray-500">
+                            <Eye className="h-3 w-3" />
+                            <span>{post.views}</span>
+                            <MessageCircle className="h-3 w-3 ml-1" />
+                            <span>{post.comments}</span>
                           </div>
-
-                          {/* Tags */}
-                          <div className="flex flex-wrap gap-2">
-                            {post.tags.map((tag, idx) => (
-                              <span
-                                key={idx}
-                                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
-                              >
-                                #{tag}
-                              </span>
-                            ))}
-                          </div>
-
-                          {/* Stats */}
-                          <div className="flex items-center justify-between pt-3 border-t">
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                              <div className="flex items-center gap-1">
-                                <Eye className="h-4 w-4" />
-                                <span>{post.views.toLocaleString()}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <MessageCircle className="h-4 w-4" />
-                                <span>{post.comments}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Heart className="h-4 w-4" />
-                                <span>{post.likes}</span>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                <Share2 className="h-4 w-4 text-gray-500" />
-                              </button>
-                              <Link
-                                to={`/blog/${post.id}`}
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
-                              >
-                                Đọc tiếp
-                              </Link>
-                            </div>
-                          </div>
+                          <span className="text-emerald-600 font-medium">Đọc →</span>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   </article>
                 ))}
               </div>
@@ -416,12 +391,62 @@ const BlogPage = () => {
                   </button>
                 </div>
               )}
+
+              {/* Pagination */}
+              {filteredPosts.length > 0 && totalPages > 1 && (
+                <div className="mt-8 flex justify-center items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg bg-white border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronsLeft className="h-5 w-5" />
+                  </button>
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg bg-white border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  
+                  {[...Array(totalPages)].map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`px-4 py-2 rounded-lg ${
+                        currentPage === i + 1
+                          ? "bg-emerald-600 text-white"
+                          : "bg-white border hover:bg-gray-50"
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg bg-white border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                  
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg bg-white border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronsRight className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Right - Sidebar */}
           <div className="lg:col-span-1">
-            {/* About Blog */}
             <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-emerald-600" />
@@ -437,68 +462,6 @@ const BlogPage = () => {
               </div>
             </div>
 
-            {/* Popular Tags */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                <Tag className="h-5 w-5 text-emerald-600" />
-                Thẻ Phổ Biến
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {popularTags.map((tag, idx) => (
-                  <Link
-                    key={idx}
-                    to={`/blog/tag/${tag.toLowerCase()}`}
-                    className="px-3 py-1.5 bg-gray-100 hover:bg-emerald-50 hover:text-emerald-700 text-gray-700 rounded-lg text-sm transition-colors"
-                  >
-                    #{tag}
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* Categories */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-              <h3 className="font-bold text-lg mb-4">Danh Mục</h3>
-              <div className="space-y-3">
-                {categories.slice(1).map((category) => (
-                  <Link
-                    key={category.slug}
-                    to={`/blog/category/${category.slug}`}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-                  >
-                    <span className="font-medium group-hover:text-emerald-600">
-                      {category.name}
-                    </span>
-                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      {category.count}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* Newsletter */}
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-white">
-              <h3 className="font-bold text-lg mb-3">Đăng Ký Nhận Tin</h3>
-              <p className="text-emerald-100 mb-4 text-sm">
-                Nhận bài viết mới và cập nhật xu hướng hàng tuần
-              </p>
-              <div className="space-y-3">
-                <input
-                  type="email"
-                  placeholder="Email của bạn"
-                  className="w-full px-4 py-2 rounded-lg border-0 text-gray-900"
-                />
-                <button className="w-full bg-white text-emerald-600 py-2 rounded-lg font-semibold hover:bg-gray-100 transition">
-                  Đăng Ký Ngay
-                </button>
-              </div>
-              <p className="text-xs text-emerald-200 mt-3">
-                Không spam. Bạn có thể hủy đăng ký bất cứ lúc nào.
-              </p>
-            </div>
-
-            {/* Recent Comments */}
             <div className="bg-white rounded-xl shadow-sm p-6 mt-8">
               <h3 className="font-bold text-lg mb-4">Bình Luận Gần Đây</h3>
               <div className="space-y-4">
@@ -522,6 +485,7 @@ const BlogPage = () => {
         </div>
       </div>
     </div>
+      </>
   );
 };
 

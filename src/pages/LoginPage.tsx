@@ -1,18 +1,47 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
 import { Mail, Lock, Eye, EyeOff, Key } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+import { useAuthStore } from "../stores/authStore";
+
+// Định nghĩa schema validation với Yup
+const loginSchema = yup.object({
+  email: yup
+    .string()
+    .email("Email không hợp lệ")
+    .required("Vui lòng nhập email")
+    .trim()
+    .max(100, "Email quá dài"),
+  password: yup
+    .string()
+    .required("Vui lòng nhập mật khẩu")
+    .min(6, "Mật khẩu phải có ít nhất 6 ký tự")
+    .max(30, "Mật khẩu quá dài"),
+});
+
+type LoginFormData = yup.InferType<typeof loginSchema>;
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // Khởi tạo React Hook Form với Yup resolver
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: yupResolver(loginSchema),
+    mode: "onBlur",
+  });
 
   // Lấy redirect URL từ query parameters
   const getRedirectUrl = () => {
@@ -26,23 +55,13 @@ const LoginPage = () => {
     const savedEmail = localStorage.getItem('userEmail');
     
     if (remembered === 'true' && savedEmail) {
-      setFormData(prev => ({
-        ...prev,
-        email: savedEmail
-      }));
+      setValue('email', savedEmail);
       setRememberMe(true);
     }
-  }, []);
+  }, [setValue]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: LoginFormData) => {
     setError("");
-
-    if (!formData.email || !formData.password) {
-      setError("Vui lòng điền đầy đủ thông tin");
-      return;
-    }
-
     setIsSubmitting(true);
 
     setTimeout(() => {
@@ -54,17 +73,26 @@ const LoginPage = () => {
       // Tìm user với email và password khớp
       const foundUser = users.find(
         (user: any) => 
-          user.email === formData.email && 
-          user.password === formData.password
+          user.email === data.email && 
+          user.password === data.password
       );
       
       if (foundUser) {
-        // Lưu thông tin đăng nhập hiện tại
-        const loggedInUser = {
+        // Chuẩn bị user data
+        const userData = {
           id: foundUser.id,
-          fullName: foundUser.fullName,
           email: foundUser.email,
+          fullName: foundUser.fullName,
+          phone: foundUser.phone,
           role: foundUser.role,
+        };
+        
+        // Cập nhật Zustand authStore để Header nhận diện user
+        login(userData);
+        
+        // Lưu thông tin đăng nhập hiện tại vào localStorage
+        const loggedInUser = {
+          ...userData,
           isLoggedIn: true,
           token: `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           lastLogin: new Date().toISOString()
@@ -75,7 +103,7 @@ const LoginPage = () => {
         // Nếu chọn "Ghi nhớ đăng nhập", lưu email vào localStorage
         if (rememberMe) {
           localStorage.setItem('rememberMe', 'true');
-          localStorage.setItem('userEmail', formData.email);
+          localStorage.setItem('userEmail', data.email);
         } else {
           localStorage.removeItem('rememberMe');
           localStorage.removeItem('userEmail');
@@ -90,18 +118,6 @@ const LoginPage = () => {
         setError("Email hoặc mật khẩu không chính xác");
       }
     }, 1500);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    if (error) {
-      setError("");
-    }
   };
 
   const handleForgotPassword = () => {
@@ -132,7 +148,8 @@ const LoginPage = () => {
               </div>
             </div>
           )}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -142,13 +159,16 @@ const LoginPage = () => {
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  {...register("email")}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+                    errors.email ? "border-red-500" : "border-gray-300"
+                  }`}
                   placeholder="example@gmail.com"
                 />
               </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              )}
             </div>
 
             {/* Password */}
@@ -169,10 +189,10 @@ const LoginPage = () => {
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  {...register("password")}
+                  className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+                    errors.password ? "border-red-500" : "border-gray-300"
+                  }`}
                   placeholder="••••••••"
                 />
                 <button
@@ -183,6 +203,9 @@ const LoginPage = () => {
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              )}
             </div>
 
             {/* Remember Me */}
@@ -230,6 +253,7 @@ const LoginPage = () => {
             </div>
           </form>
         </div>
+        
         {/* Security note */}
         <div className="mt-8 text-center">
           <div className="inline-flex items-center text-sm text-gray-500">

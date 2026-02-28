@@ -1,12 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router";
 import { useState, useEffect, useRef } from "react";
-import { Search, Menu, X, ShoppingCart, User, ChevronDown, Bell, LogOut, Clock, } from "lucide-react";
-import { useCart } from "../context/CartContext";
+import { Search, Menu, X, ShoppingCart, User, ChevronDown, Bell, LogOut, Clock } from "lucide-react";
+import { useCartStore } from "../stores/cartStore";
+import { useAuthStore } from "../stores/authStore";
 import { courses } from "../data/courses";
-import { generateCourseImage } from "../utils/imageGenerator"; // Thêm import này
+import { generateCourseImage } from "../utils/imageGenerator";
 
 function Header() {
-  const [user, setUser] = useState<any>(null);
   const [openMenu, setOpenMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -14,11 +14,17 @@ function Header() {
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
   const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  
   const location = useLocation();
   const navigate = useNavigate();
-  const { cartCount } = useCart();
   const searchRef = useRef<HTMLDivElement>(null);
 
+  // ✅ LẤY DỮ LIỆU TỪ ZUSTAND STORES
+  const cartItems = useCartStore((state) => state.cartItems);
+  const { user, logout } = useAuthStore();
+  
+  // ✅ TÍNH CART COUNT TỪ CART ITEMS
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const notificationCount = 0;
 
   // Lấy recent searches từ localStorage
@@ -41,39 +47,10 @@ function Header() {
       const decodedSearch = decodeURIComponent(searchParam);
       setSearchQuery(decodedSearch);
       
-      // Thêm vào recent searches
       if (decodedSearch.trim()) {
         addToRecentSearches(decodedSearch.trim());
       }
     }
-  }, [location]);
-
-  // Kiểm tra đăng nhập
-  useEffect(() => {
-    const checkLoggedInUser = () => {
-      const loggedInUser = localStorage.getItem('currentUser');
-      if (loggedInUser) {
-        try {
-          const userData = JSON.parse(loggedInUser);
-          if (userData.isLoggedIn) {
-            setUser(userData);
-          } else {
-            setUser(null);
-            localStorage.removeItem('currentUser');
-          }
-        } catch (error) {
-          console.error("Error parsing user data:", error);
-          localStorage.removeItem('currentUser');
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-    };
-
-    checkLoggedInUser();
-    window.addEventListener('storage', checkLoggedInUser);
-    return () => window.removeEventListener('storage', checkLoggedInUser);
   }, [location]);
 
   // Track scroll
@@ -100,7 +77,7 @@ function Header() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, [showUserDropdown, showSearchSuggestions]);
 
-  // Generate search suggestions khi search query thay đổi
+  // Generate search suggestions
   useEffect(() => {
     if (searchQuery.trim() && !showSearchSuggestions) {
       setShowSearchSuggestions(true);
@@ -113,7 +90,7 @@ function Header() {
           course.instructor.toLowerCase().includes(searchQuery.toLowerCase()) ||
           course.category.toLowerCase().includes(searchQuery.toLowerCase())
         )
-        .slice(0, 5); // Giới hạn 5 kết quả
+        .slice(0, 5);
       
       setSearchSuggestions(filtered);
     } else {
@@ -121,22 +98,21 @@ function Header() {
     }
   }, [searchQuery]);
 
-  // Hàm thêm vào recent searches
   const addToRecentSearches = (query: string) => {
     if (!query.trim()) return;
     
     const newSearches = [
       query,
       ...recentSearches.filter(s => s.toLowerCase() !== query.toLowerCase())
-    ].slice(0, 5); // Giữ tối đa 5 searches
+    ].slice(0, 5);
     
     setRecentSearches(newSearches);
     localStorage.setItem('recentSearches', JSON.stringify(newSearches));
   };
 
+  // ✅ SỬA HANDLE LOGOUT DÙNG LOGOUT TỪ AUTHSTORE
   const handleLogout = () => {
-    localStorage.removeItem('currentUser');
-    setUser(null);
+    logout(); // Dùng hàm logout từ authStore
     setShowUserDropdown(false);
     setOpenMenu(false);
     navigate("/login");
@@ -178,10 +154,12 @@ function Header() {
     { path: "/blog", label: "Blog" },
     { path: "/contact", label: "Liên hệ" },
   ];
+
   const getUserInitial = () => {
     if (!user || !user.fullName) return "U";
     return user.fullName.charAt(0).toUpperCase();
   };
+
   return (
     <>
       {/* HEADER */}
@@ -196,7 +174,6 @@ function Header() {
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Left: Hamburger + Logo */}
             <div className="flex items-center gap-4">
-              {/* Hamburger (mobile) */}
               <button
                 className="md:hidden"
                 onClick={() => setOpenMenu(true)}
@@ -205,11 +182,7 @@ function Header() {
                 <Menu size={26} className="text-gray-700 hover:text-emerald-600" />
               </button>
 
-              {/* Logo */}
-              <Link
-                to="/"
-                className="flex items-center gap-2"
-              >
+              <Link to="/" className="flex items-center gap-2">
                 <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl flex items-center justify-center">
                   <span className="text-white font-bold text-lg">EC</span>
                 </div>
@@ -277,7 +250,6 @@ function Header() {
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border overflow-hidden z-50">
                     {searchQuery ? (
                       <>
-                        {/* Search Results */}
                         {searchSuggestions.length > 0 ? (
                           <>
                             <div className="px-4 py-2 border-b bg-gray-50">
@@ -290,7 +262,6 @@ function Header() {
                                   className="flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
                                   onClick={() => handleCourseClick(course.id)}
                                 >
-                                  {/* Sử dụng generateCourseImage thay vì icon */}
                                   <div className="h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 mr-3">
                                     <img 
                                       src={generateCourseImage(course.image)} 
@@ -313,7 +284,7 @@ function Header() {
                                       {course.price.toLocaleString()}₫
                                     </div>
                                     <div className="text-xs text-gray-500">
-                                      {course.students.toLocaleString()} học viên
+                                      {course.students?.toLocaleString() || 0} học viên
                                     </div>
                                   </div>
                                 </div>
@@ -341,7 +312,6 @@ function Header() {
                       </>
                     ) : (
                       <>
-                        {/* Recent Searches */}
                         <div className="px-4 py-2 border-b bg-gray-50">
                           <div className="flex justify-between items-center">
                             <p className="text-xs font-medium text-gray-600">TÌM KIẾM GẦN ĐÂY</p>
@@ -374,7 +344,6 @@ function Header() {
                             <p className="text-sm text-gray-500">Chưa có tìm kiếm gần đây</p>
                           </div>
                         )}
-                        {/* Popular Searches */}
                         <div className="px-4 py-2 border-t border-b bg-gray-50">
                           <p className="text-xs font-medium text-gray-600">TÌM KIẾM PHỔ BIẾN</p>
                         </div>
@@ -400,7 +369,6 @@ function Header() {
 
             {/* Right */}
             <div className="flex items-center gap-2 md:gap-3">
-              {/* Search mobile */}
               <button 
                 className="lg:hidden p-2 text-gray-600 hover:text-emerald-600"
                 onClick={() => navigate('/courses')}
@@ -409,21 +377,7 @@ function Header() {
                 <Search size={20} />
               </button>
 
-              {/* Notification */}
-              <button className="relative p-2 text-gray-600 hover:text-emerald-600 transition-colors">
-                <Bell size={20} />
-                {notificationCount > 0 && (
-                  <span className="absolute top-1 right-1 h-4 w-4 bg-rose-500 text-white text-xs rounded-full flex items-center justify-center">
-                    {notificationCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Cart */}
-              <Link 
-                to="/cart" 
-                className="relative p-2 text-gray-600 hover:text-emerald-600 transition-colors"
-              >
+              <Link to="/cart" className="relative p-2 text-gray-600 hover:text-emerald-600 transition-colors">
                 <ShoppingCart size={20} />
                 {cartCount > 0 && (
                   <span className="absolute top-1 right-1 h-5 w-5 bg-emerald-600 text-white text-xs rounded-full flex items-center justify-center font-medium">
@@ -432,13 +386,9 @@ function Header() {
                 )}
               </Link>
 
-              {/* User/Auth */}
               {!user ? (
                 <div className="hidden md:flex items-center gap-2">
-                  <Link 
-                    to="/login" 
-                    className="px-3 py-2 text-emerald-700 hover:text-emerald-800 font-medium transition-colors text-sm"
-                  >
+                  <Link to="/login" className="px-3 py-2 text-emerald-700 hover:text-emerald-800 font-medium transition-colors text-sm">
                     Đăng nhập
                   </Link>
                   <Link
@@ -468,7 +418,6 @@ function Header() {
                     />
                   </button>
                   
-                  {/* User dropdown */}
                   {showUserDropdown && (
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border py-2 z-50">
                       <div className="px-4 py-3 border-b">
@@ -476,7 +425,7 @@ function Header() {
                         <p className="text-xs text-gray-500 mt-1">{user.email}</p>
                         <div className="mt-2 flex items-center">
                           <span className="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs rounded-full">
-                            {user.role === "student" ? "Học viên" : user.role}
+                            {user.role === "student" ? "Học viên" : user.role || "Học viên"}
                           </span>
                         </div>
                       </div>
@@ -518,7 +467,6 @@ function Header() {
                 </div>
               )}
 
-              {/* Auth mobile */}
               {!user && (
                 <Link
                   to="/login"
@@ -546,13 +494,8 @@ function Header() {
         transform transition-transform duration-300 ease-in-out
         ${openMenu ? "translate-x-0" : "-translate-x-full"}`}
       >
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
-          <Link 
-            to="/" 
-            onClick={() => setOpenMenu(false)}
-            className="flex items-center gap-3"
-          >
+          <Link to="/" onClick={() => setOpenMenu(false)} className="flex items-center gap-3">
             <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">EC</span>
             </div>
@@ -561,15 +504,11 @@ function Header() {
               <div className="text-xs text-gray-500">Học tập thông minh</div>
             </div>
           </Link>
-          <button 
-            onClick={() => setOpenMenu(false)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
+          <button onClick={() => setOpenMenu(false)} className="p-2 hover:bg-gray-100 rounded-lg">
             <X size={24} className="text-gray-700" />
           </button>
         </div>
 
-        {/* Search mobile in menu */}
         <div className="p-6 border-b">
           <form onSubmit={handleSearch}>
             <div className="relative">
@@ -585,7 +524,6 @@ function Header() {
           </form>
         </div>
 
-        {/* Menu items */}
         <div className="p-4">
           <div className="space-y-1">
             {navItems.map((item) => (
@@ -663,7 +601,6 @@ function Header() {
             )}
           </div>
 
-          {/* Contact info */}
           <div className="mt-8 px-4">
             <p className="text-sm text-gray-500 mb-2">📞 Hotline: 1900 1234</p>
             <p className="text-sm text-gray-500">✉️ support@educourse.vn</p>
@@ -673,5 +610,4 @@ function Header() {
     </>
   );
 }
-
 export default Header;

@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { Link, } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Play, Clock, Award, BookOpen, BarChart, Calendar, Download, Search, FolderOpen, Lock, ChevronRight, Star, CheckCircle, AlertCircle } from "lucide-react";
-import { getPurchasedCourses, updateCourseProgress, removePurchasedCourse, type Purchase } from "../utils/purchasesUtils";
+import type { Purchase } from "../stores/purchaseStore";
+import { useAuthStore } from "../stores/authStore";
+import { usePurchaseStore } from "../stores/purchaseStore";
 
 interface Course {
   id: number;
@@ -21,75 +23,84 @@ interface Course {
 }
 
 const MyCoursesPage = () => {
+  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [myCourses, setMyCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { user, isLoggedIn } = useAuthStore();
+  const purchasesState = usePurchaseStore(state => state.purchases);
+  const getPurchasesByUser = usePurchaseStore(state => state.getPurchasesByUser);
+  const currentUserId = user ? (user.id || user.email) : null;
+  const removePurchase = usePurchaseStore(state => state.removePurchase);
+  const updatePurchaseProgressInStore = usePurchaseStore(state => state.updatePurchaseProgress);
 
-  // Kiểm tra đăng nhập và load khóa học
+  // Nếu chưa đăng nhập => hiển thị giao diện yêu cầu đăng nhập
+  if (!isLoggedIn || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="mx-auto h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center mb-6">
+              <Lock className="h-12 w-12 text-gray-400" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Vui lòng đăng nhập</h2>
+            <p className="text-gray-600 mb-8">Bạn cần đăng nhập để xem khóa học của mình</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                to="/login?redirect=/my-courses"
+                className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-8 py-3 text-lg font-semibold text-white hover:bg-emerald-700 transition-colors"
+              >
+                Đăng nhập ngay
+              </Link>
+              <Link
+                to="/courses"
+                className="inline-flex items-center justify-center rounded-lg border border-emerald-600 px-8 py-3 text-lg font-semibold text-emerald-600 hover:bg-emerald-50 transition-colors"
+              >
+                <BookOpen className="mr-2 h-5 w-5" />
+                Khám phá khóa học
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Đã đăng nhập - load khóa học (kết hợp zustand + legacy localStorage)
   useEffect(() => {
-    const checkLoginAndLoadCourses = () => {
+    const loadCourses = () => {
       setIsLoading(true);
-      
-      // Kiểm tra đăng nhập
-      const currentUserStr = localStorage.getItem('currentUser');
-      if (!currentUserStr) {
-        setIsLoading(false);
-        setCurrentUserId(null);
-        return;
-      }
 
       try {
-        const currentUser = JSON.parse(currentUserStr);
-        const userId = currentUser.id || currentUser.email;
-        setCurrentUserId(userId);
-        
-        // Load khóa học đã mua từ purchasesUtils
-        const purchasedCourses = getPurchasedCourses(userId);
-        
-        if (purchasedCourses.length > 0) {
-          // Tìm thông tin chi tiết khóa học từ danh sách khóa học có sẵn
-          const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
-          
-          // Chuyển đổi purchases thành format Course
-          const courses: Course[] = purchasedCourses.map((purchase: Purchase) => {
-            const courseDetails = allCourses.find((c: any) => c.id === purchase.courseId);
-            
-            return {
-              id: purchase.courseId,
-              title: purchase.title || courseDetails?.title || `Khóa học #${purchase.courseId}`,
-              instructor: purchase.instructor || courseDetails?.instructor || "Giảng viên",
-              category: purchase.category || courseDetails?.category || "Khác",
-              progress: purchase.progress || 0,
-              lastAccessed: purchase.lastAccessed 
-                ? new Date(purchase.lastAccessed).toLocaleDateString('vi-VN') 
-                : new Date().toLocaleDateString('vi-VN'),
-              totalLessons: purchase.totalLessons || courseDetails?.lessons || 10,
-              completedLessons: purchase.completedLessons || 0,
-              duration: purchase.duration || courseDetails?.duration || "2 giờ",
-              purchaseDate: purchase.purchaseDate 
-                ? new Date(purchase.purchaseDate).toLocaleDateString('vi-VN') 
-                : new Date().toLocaleDateString('vi-VN'),
-              expiryDate: purchase.expiryDate 
-                ? new Date(purchase.expiryDate).toLocaleDateString('vi-VN') 
-                : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN'),
-              certificate: purchase.certificate || false,
-              image: purchase.image || courseDetails?.image || "general",
-              status: purchase.progress === 100 ? "completed" : 
-                      purchase.progress > 0 ? "in-progress" : "not-started"
-            };
-          });
+        const userId = user.id || user.email;
 
-          // Lọc trùng lặp - chỉ giữ 1 bản ghi cho mỗi khóa học
-          const uniqueCourses = Array.from(
-            new Map(courses.map(course => [course.id, course])).values()
-          );
-          
-          setMyCourses(uniqueCourses);
-        } else {
-          setMyCourses([]);
-        }
+        // Lấy purchases từ zustand store
+        const merged: Purchase[] = getPurchasesByUser(userId) || [];
+
+        const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+
+        const courses: Course[] = merged.map((purchase: Purchase) => {
+          const courseDetails = allCourses.find((c: any) => c.id === purchase.courseId);
+          return {
+            id: purchase.courseId,
+            title: purchase.title || courseDetails?.title || `Khóa học #${purchase.courseId}`,
+            instructor: purchase.instructor || courseDetails?.instructor || "Giảng viên",
+            category: purchase.category || courseDetails?.category || "Khác",
+            progress: purchase.progress || 0,
+            lastAccessed: purchase.lastAccessed ? new Date(purchase.lastAccessed).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'),
+            totalLessons: purchase.totalLessons || courseDetails?.lessons || 10,
+            completedLessons: purchase.completedLessons || 0,
+            duration: purchase.duration || courseDetails?.duration || "2 giờ",
+            purchaseDate: purchase.purchaseDate ? new Date(purchase.purchaseDate).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'),
+            expiryDate: purchase.expiryDate ? new Date(purchase.expiryDate).toLocaleDateString('vi-VN') : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN'),
+            certificate: purchase.certificate || false,
+            image: purchase.image || courseDetails?.image || "general",
+            status: purchase.progress === 100 ? "completed" : purchase.progress > 0 ? "in-progress" : "not-started"
+          };
+        });
+
+        setMyCourses(courses);
       } catch (error) {
         console.error("Error loading courses:", error);
         setMyCourses([]);
@@ -98,10 +109,8 @@ const MyCoursesPage = () => {
       }
     };
 
-    checkLoginAndLoadCourses();
-    window.addEventListener('storage', checkLoginAndLoadCourses);
-    return () => window.removeEventListener('storage', checkLoginAndLoadCourses);
-  }, []);
+    loadCourses();
+  }, [user, isLoggedIn, purchasesState]);
 
   // Lọc khóa học theo trạng thái
   const filteredCourses = myCourses.filter(course => {
@@ -141,13 +150,12 @@ const MyCoursesPage = () => {
           );
         }
         
-        // Cập nhật trong localStorage
-        updateCourseProgress(
-          courseId, 
-          currentUserId, 
-          newProgress, 
-          newCompletedLessons
-        );
+        // Đồng bộ lên zustand store
+        try {
+          updatePurchaseProgressInStore(currentUserId as string, courseId, newProgress, newCompletedLessons);
+        } catch (e) {
+          console.error('Failed to update purchase in store', e);
+        }
         
         return {
           ...course,
@@ -188,53 +196,20 @@ const MyCoursesPage = () => {
     if (!currentUserId) return;
     
     if (window.confirm("Bạn có chắc muốn xóa khóa học này khỏi danh sách của bạn?")) {
-      // Xóa khỏi localStorage
-      const success = removePurchasedCourse(courseId, currentUserId);
-      
-      if (success) {
-        // Xóa khỏi state
-        setMyCourses(prev => prev.filter(course => course.id !== courseId));
-        alert("Đã xóa khóa học khỏi danh sách của bạn.");
-      } else {
-        alert("Không thể xóa khóa học. Vui lòng thử lại.");
+      // Đồng bộ xóa lên zustand store (store sẽ đồng bộ xuống localStorage)
+      try {
+        removePurchase(currentUserId as string, courseId);
+      } catch (e) {
+        console.error('Failed to remove from purchase store', e);
       }
+
+      // Xóa khỏi state UI
+      setMyCourses(prev => prev.filter(course => course.id !== courseId));
+      alert("Đã xóa khóa học khỏi danh sách của bạn.");
     }
   };
 
-  // Kiểm tra nếu chưa đăng nhập
-  if (!currentUserId) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="mx-auto h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center mb-6">
-              <Lock className="h-12 w-12 text-gray-400" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Vui lòng đăng nhập</h2>
-            <p className="text-gray-600 mb-8">
-              Bạn cần đăng nhập để xem khóa học của mình
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/login?redirect=/my-courses"
-                className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-8 py-3 text-lg font-semibold text-white hover:bg-emerald-700 transition-colors"
-              >
-                Đăng nhập ngay
-              </Link>
-              <Link
-                to="/courses"
-                className="inline-flex items-center justify-center rounded-lg border border-emerald-600 px-8 py-3 text-lg font-semibold text-emerald-600 hover:bg-emerald-50 transition-colors"
-              >
-                <BookOpen className="mr-2 h-5 w-5" />
-                Khám phá khóa học
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // Hiển thị loading khi đã đăng nhập
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
@@ -250,8 +225,12 @@ const MyCoursesPage = () => {
     );
   }
 
+  // Hiển thị khi đã đăng nhập nhưng chưa có khóa học
   if (myCourses.length === 0) {
     return (
+      <>
+      <title>MyCourses Page</title>
+      <meta name="description" content="MyCourses Page" />
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -280,10 +259,15 @@ const MyCoursesPage = () => {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
+  // Đã đăng nhập và có khóa học - Hiển thị danh sách
   return (
+    <>
+      <title>MyCourses Page</title>
+      <meta name="description" content="MyCourses Page" />
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -298,7 +282,7 @@ const MyCoursesPage = () => {
             <div className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-emerald-500" />
               <span className="text-sm text-gray-600">
-                {myCourses.length} khóa học duy nhất
+                {myCourses.length} khóa học
               </span>
             </div>
           </div>
@@ -343,22 +327,6 @@ const MyCoursesPage = () => {
             </div>
           </div>
         </div>
-
-        {/* Warning về trùng lặp */}
-        {myCourses.length > 0 && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-blue-800">Không trùng lặp khóa học</p>
-                <p className="text-sm text-blue-700">
-                  Hệ thống tự động ngăn chặn mua cùng một khóa học nhiều lần. 
-                  Mỗi khóa học chỉ xuất hiện một lần trong danh sách của bạn.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Filters and Search */}
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
@@ -513,7 +481,6 @@ const MyCoursesPage = () => {
                     Tài liệu
                   </button>
                   
-                  {/* Remove button (optional) */}
                   <button
                     onClick={() => removeCourse(course.id)}
                     className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
@@ -606,6 +573,7 @@ const MyCoursesPage = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

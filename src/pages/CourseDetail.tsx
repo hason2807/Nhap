@@ -1,8 +1,23 @@
 import { useParams } from "react-router";
 import { courses } from "../data/courses";
 import { generateCourseImage } from "../utils/imageGenerator";
-import { useCart } from "../context/CartContext";
-import { ShoppingCart, CheckCircle, Clock, Users, Award, Globe, FileText, PlayCircle, Star, Check, BookOpen, ChevronRight, Shield, Download } from "lucide-react";
+import { useCartStore } from "../stores/cartStore";
+import { useAuthStore } from "../stores/authStore";
+import { 
+  ShoppingCart, 
+  CheckCircle, 
+  Clock, 
+  Users, 
+  Award, 
+  Globe, 
+  FileText, 
+  PlayCircle, 
+  Star, 
+  Check, 
+  BookOpen, 
+  ChevronRight, 
+  Shield,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 
@@ -10,7 +25,11 @@ const CourseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const course = courses.find((c) => c.id === Number(id));
-  const { addToCart, cartItems } = useCart();
+  
+  // ✅ Dùng Zustand stores
+  const { addToCart, cartItems } = useCartStore();
+  const { isLoggedIn } = useAuthStore();
+  
   const [addedToCart, setAddedToCart] = useState(false);
   const [activeTab, setActiveTab] = useState("curriculum");
 
@@ -37,9 +56,8 @@ const CourseDetail = () => {
   const isInCart = cartItems.some(item => item.id === course.id);
 
   const handleAddToCart = () => {
-    // Kiểm tra đăng nhập trước khi thêm vào giỏ hàng
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
+    // ✅ Kiểm tra đăng nhập bằng isLoggedIn từ authStore
+    if (!isLoggedIn) {
       const shouldLogin = window.confirm(
         "Bạn cần đăng nhập để thêm khóa học vào giỏ hàng.\n\nBạn có muốn chuyển đến trang đăng nhập ngay bây giờ?"
       );
@@ -59,7 +77,8 @@ const CourseDetail = () => {
       image: course.image,
       category: course.category,
       lessons: course.lessons,
-      duration: course.duration
+      duration: course.duration,
+      quantity: 1
     });
     
     setAddedToCart(true);
@@ -77,8 +96,8 @@ const CourseDetail = () => {
   };
 
   const handleBuyNow = () => {
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
+    // ✅ Kiểm tra đăng nhập bằng isLoggedIn từ authStore
+    if (!isLoggedIn) {
       const shouldLogin = window.confirm(
         "Bạn cần đăng nhập để mua khóa học.\n\nBạn có muốn chuyển đến trang đăng nhập ngay bây giờ?"
       );
@@ -97,6 +116,9 @@ const CourseDetail = () => {
   };
 
   return (
+    <>
+      <title>Courses Details Page</title>
+      <meta name="description" content="MyCourses Page" />
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
@@ -175,7 +197,7 @@ const CourseDetail = () => {
                     </div>
                     <div className="flex items-center">
                       <Globe className="h-4 w-4 mr-2" />
-                      <span>Ngôn ngữ: {course.language}</span>
+                      <span>Ngôn ngữ: {course.language || "Tiếng Việt"}</span>
                     </div>
                     <div className="flex items-center">
                       <Award className="h-4 w-4 mr-2" />
@@ -267,7 +289,7 @@ const CourseDetail = () => {
               <div className="flex items-start gap-4">
                 <div className="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
                   <span className="text-white font-bold text-xl">
-                    {course.instructor.split(' ').map(n => n[0]).join('')}
+                    {course.instructor.split(' ').map((n: string) => n[0]).join('')}
                   </span>
                 </div>
                 <div>
@@ -282,7 +304,7 @@ const CourseDetail = () => {
               </div>
             </div>
           </div>
-
+          
           {/* Sidebar - Purchase Card */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-lg p-6 sticky top-6">
@@ -402,6 +424,7 @@ const CourseDetail = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

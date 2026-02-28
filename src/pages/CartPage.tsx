@@ -1,34 +1,17 @@
 import { Link, useNavigate } from "react-router";
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, CreditCard, Tag, Shield, Lock } from "lucide-react";
-import { useCart } from "../context/CartContext";
+import { useCartStore } from "../stores/cartStore";
+import { useAuthStore } from "../stores/authStore";
 import { useState, useEffect } from "react";
 
 const CartPage = () => {
   const navigate = useNavigate();
-  const { 
-    cartItems, 
-    removeFromCart, 
-    updateQuantity, 
-    clearCart,
-    cartTotal 
-  } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, clearCart } = useCartStore();
+  const { isLoggedIn } = useAuthStore();
 
   const [couponCode, setCouponCode] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponError, setCouponError] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  // Kiểm tra đăng nhập khi component mount
-  useEffect(() => {
-    const checkLogin = () => {
-      const currentUser = localStorage.getItem('currentUser');
-      setIsLoggedIn(!!currentUser);
-    };
-
-    checkLogin();
-    window.addEventListener('storage', checkLogin);
-    return () => window.removeEventListener('storage', checkLogin);
-  }, []);
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -37,7 +20,7 @@ const CartPage = () => {
   );
   
   const couponDiscount = couponApplied ? 200000 : 0;
-  const total = cartTotal - couponDiscount;
+  const total = subtotal - totalDiscount - couponDiscount;
 
   const handleUpdateQuantity = (id: number, change: number) => {
     const item = cartItems.find(item => item.id === id);
@@ -90,10 +73,20 @@ const CartPage = () => {
     navigate("/checkout");
   };
 
-  // Nếu chưa đăng nhập
+  // Reset coupon when cart changes
+  useEffect(() => {
+    if (couponApplied) {
+      setCouponApplied(false);
+      setCouponCode("");
+    }
+  }, [cartItems]);
+
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12">
+      <>
+      <title>Cart Page</title>
+      <meta name="description" content="Cart Page" />
+      <div className=" bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="mx-auto h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center mb-6">
@@ -121,11 +114,15 @@ const CartPage = () => {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   if (cartItems.length === 0) {
     return (
+      <>
+      <title>Cart Page</title>
+      <meta name="description" content="Cart Page" />
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -152,10 +149,14 @@ const CartPage = () => {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   return (
+     <>
+      <title>Cart Page</title>
+      <meta name="description" content="Cart Page" />
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Giỏ hàng của bạn</h1>
@@ -449,6 +450,7 @@ const CartPage = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

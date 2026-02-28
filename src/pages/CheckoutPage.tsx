@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { CreditCard, Wallet, Banknote, Lock, ShieldCheck, ArrowLeft, CheckCircle, User, Phone, Mail, AlertCircle } from "lucide-react";
-import { useCart } from "../context/CartContext";
+import { useCartStore } from "../stores/cartStore";
+import { useAuthStore } from "../stores/authStore";
+import { usePurchaseStore } from "../stores/purchaseStore";
 
 interface CourseData {
   id: number;
@@ -16,7 +18,9 @@ interface CourseData {
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { cartItems, cartTotal, clearCart } = useCart();
+  const { cartItems, clearCart, removeFromCart } = useCartStore();
+  const { user, isLoggedIn } = useAuthStore();
+  const { addMultiplePurchases, checkPurchased, getPurchasesByUser } = usePurchaseStore();
   
   // Form state
   const [formData, setFormData] = useState({
@@ -30,61 +34,31 @@ const CheckoutPage = () => {
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [alreadyPurchasedCourses, setAlreadyPurchasedCourses] = useState<number[]>([]);
 
   // Kiểm tra đăng nhập và khóa học đã mua
   useEffect(() => {
-    const checkLoginAndPurchases = () => {
-      const user = localStorage.getItem('currentUser');
-      if (!user) {
-        alert("Vui lòng đăng nhập để thanh toán!");
-        navigate("/login?redirect=/checkout");
-        return;
-      }
-      
-      try {
-        const userData = JSON.parse(user);
-        setIsLoggedIn(true);
-        setCurrentUser(userData);
-        
-        // Auto-fill form với thông tin user
-        setFormData(prev => ({
-          ...prev,
-          fullName: userData.fullName || "",
-          email: userData.email || "",
-          phone: userData.phone || ""
-        }));
+    if (!isLoggedIn || !user) {
+      navigate("/login?redirect=/checkout");
+      return;
+    }
+    
+    // Auto-fill form với thông tin user
+    setFormData(prev => ({
+      ...prev,
+      fullName: user.fullName || "",
+      email: user.email || "",
+      phone: user.phone || ""
+    }));
 
-        // Kiểm tra khóa học đã mua
-        checkPurchasedCourses(userData);
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-        navigate("/login");
-      }
-    };
-
-    const checkPurchasedCourses = (userData: any) => {
-      const userId = userData.id || userData.email;
-      const purchasesKey = `purchases_${userId}`;
-      const savedPurchases = localStorage.getItem(purchasesKey);
-      
-      if (savedPurchases) {
-        try {
-          const purchases = JSON.parse(savedPurchases);
-          const purchasedCourseIds = purchases.map((purchase: any) => purchase.courseId);
-          setAlreadyPurchasedCourses(purchasedCourseIds);
-        } catch (error) {
-          console.error("Error checking purchased courses:", error);
-        }
-      }
-    };
-
-    checkLoginAndPurchases();
-    window.addEventListener('storage', checkLoginAndPurchases);
-    return () => window.removeEventListener('storage', checkLoginAndPurchases);
-  }, [navigate]);
+    // Kiểm tra khóa học đã mua
+    const userId = user.id || user.email;
+    const purchased = cartItems
+      .filter(item => checkPurchased(userId, item.id))
+      .map(item => item.id);
+    
+    setAlreadyPurchasedCourses(purchased);
+  }, [isLoggedIn, user, cartItems, navigate, checkPurchased]);
 
   // Tính tổng số khóa học chưa mua
   const newCourses = cartItems.filter(item => !alreadyPurchasedCourses.includes(item.id));
@@ -92,48 +66,12 @@ const CheckoutPage = () => {
 
   // Calculate totals chỉ tính khóa học mới
   const subtotal = newCourses.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discount = couponApplied ? 200000 : 0;
-  const total = Math.max(0, subtotal - discount);
+  const couponDiscount = couponApplied ? 200000 : 0;
+  const total = subtotal - couponDiscount;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Hàm thêm khóa học vào purchases
-  const addCourseToPurchases = (courseData: CourseData, userId: string) => {
-    const purchasesKey = `purchases_${userId}`;
-    const savedPurchases = localStorage.getItem(purchasesKey);
-    let purchases = savedPurchases ? JSON.parse(savedPurchases) : [];
-    
-    // Kiểm tra nếu khóa học đã tồn tại
-    const alreadyPurchased = purchases.some((p: any) => p.courseId === courseData.id);
-    
-    if (alreadyPurchased) {
-      return false;
-    }
-    
-    // Thêm khóa học mới
-    const newPurchase = {
-      courseId: courseData.id,
-      title: courseData.title,
-      instructor: courseData.instructor,
-      category: courseData.category,
-      purchaseDate: new Date().toISOString(),
-      expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      progress: 0,
-      lastAccessed: new Date().toISOString(),
-      completedLessons: 0,
-      totalLessons: courseData.lessons || 10,
-      duration: courseData.duration || "2 giờ",
-      certificate: true,
-      image: courseData.image || "general",
-      price: courseData.price || 0
-    };
-    
-    purchases.push(newPurchase);
-    localStorage.setItem(purchasesKey, JSON.stringify(purchases));
-    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -145,7 +83,7 @@ const CheckoutPage = () => {
       return;
     }
 
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !user) {
       alert("Vui lòng đăng nhập để thanh toán!");
       navigate("/login?redirect=/checkout");
       return;
@@ -159,10 +97,8 @@ const CheckoutPage = () => {
       
       if (shouldProceed) {
         alreadyOwnedCourses.forEach(item => {
-          // Xóa khỏi giỏ hàng
-          // Gọi hàm removeFromCart từ CartContext nếu có
+          removeFromCart(item.id);
         });
-        clearCart();
         navigate("/my-courses");
       }
       return;
@@ -185,27 +121,28 @@ const CheckoutPage = () => {
     // Giả lập xử lý thanh toán
     setTimeout(() => {
       try {
-        const userId = currentUser.id || currentUser.email;
-        let addedCount = 0;
+        const userId = user.id || user.email;
 
-        // Thêm từng khóa học mới vào purchases
-        newCourses.forEach(course => {
-          const courseData: CourseData = {
-            id: course.id,
-            title: course.title,
-            instructor: course.instructor,
-            category: course.category,
-            lessons: course.lessons,
-            duration: course.duration,
-            image: course.image,
-            price: course.price
-          };
-          
-          const success = addCourseToPurchases(courseData, userId);
-          if (success) {
-            addedCount++;
-          }
-        });
+        // Tạo danh sách khóa học mới để thêm vào purchases
+        const newPurchases = newCourses.map(course => ({
+          courseId: course.id,
+          title: course.title,
+          instructor: course.instructor,
+          category: course.category,
+          purchaseDate: new Date().toISOString(),
+          expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          progress: 0,
+          lastAccessed: new Date().toISOString(),
+          completedLessons: 0,
+          totalLessons: course.lessons || 10,
+          duration: course.duration || "2 giờ",
+          certificate: true,
+          image: course.image || "general",
+          price: course.price || 0
+        }));
+
+        // Thêm tất cả khóa học mới vào purchases
+        addMultiplePurchases(userId, newPurchases);
 
         // Xóa giỏ hàng
         clearCart();
@@ -213,22 +150,17 @@ const CheckoutPage = () => {
         setIsProcessing(false);
         
         // Hiển thị thông báo thành công
-        if (addedCount > 0) {
-          let message = `🎉 Thanh toán thành công!\n\n`;
-          message += `Đã thêm ${addedCount} khóa học vào tài khoản của bạn.\n`;
-          
-          if (alreadyOwnedCourses.length > 0) {
-            message += `\n(${alreadyOwnedCourses.length} khóa học đã có trong thư viện, không tính phí)`;
-          }
-          
-          message += `\n\nVui lòng kiểm tra trang 'Khóa học của tôi'.`;
-          
-          alert(message);
-          navigate("/my-courses");
-        } else {
-          alert("Không có khóa học mới nào được thêm vào.");
-          navigate("/my-courses");
+        let message = `🎉 Thanh toán thành công!\n\n`;
+        message += `Đã thêm ${newCourses.length} khóa học vào tài khoản của bạn.\n`;
+        
+        if (alreadyOwnedCourses.length > 0) {
+          message += `\n(${alreadyOwnedCourses.length} khóa học đã có trong thư viện, không tính phí)`;
         }
+        
+        message += `\n\nVui lòng kiểm tra trang 'Khóa học của tôi'.`;
+        
+        alert(message);
+        navigate("/my-courses");
       } catch (error) {
         console.error("Error in checkout:", error);
         setIsProcessing(false);
@@ -260,8 +192,19 @@ const CheckoutPage = () => {
     setCouponError("");
   };
 
+  // Reset coupon when cart changes
+  useEffect(() => {
+    if (couponApplied) {
+      setCouponApplied(false);
+      setCoupon("");
+    }
+  }, [cartItems]);
+
   if (!isLoggedIn) {
     return (
+       <>
+      <title>Checkout Page</title>
+      <meta name="description" content="Checkout Page" />
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -279,11 +222,15 @@ const CheckoutPage = () => {
           </div>
         </div>
       </div>
+        </>
     );
   }
 
   if (cartItems.length === 0) {
     return (
+      <>
+      <title>Checkout Page</title>
+      <meta name="description" content="Checkout Page" />
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -310,10 +257,14 @@ const CheckoutPage = () => {
           </div>
         </div>
       </div>
+        </>
     );
   }
 
   return (
+    <>
+      <title>Checkout Page</title>
+      <meta name="description" content="Checkout Page" />
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
@@ -614,14 +565,14 @@ const CheckoutPage = () => {
               <div className="space-y-3 pt-6 border-t">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tổng giỏ hàng:</span>
-                  <span className="font-medium">{cartTotal.toLocaleString()}₫</span>
+                  <span className="font-medium">{useCartStore.getState().cartTotal.toLocaleString()}₫</span>
                 </div>
 
                 {alreadyOwnedCourses.length > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Khóa học đã sở hữu:</span>
                     <span className="text-emerald-600 font-medium">
-                      -{(cartTotal - subtotal).toLocaleString()}₫
+                      -{(useCartStore.getState().cartTotal - subtotal).toLocaleString()}₫
                     </span>
                   </div>
                 )}
@@ -630,7 +581,7 @@ const CheckoutPage = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Giảm giá coupon:</span>
                     <span className="text-emerald-600 font-medium">
-                      -{discount.toLocaleString()}₫
+                      -{couponDiscount.toLocaleString()}₫
                     </span>
                   </div>
                 )}
@@ -644,7 +595,7 @@ const CheckoutPage = () => {
                   {(alreadyOwnedCourses.length > 0 || couponApplied) && (
                     <div className="mt-2 text-sm text-emerald-600">
                       Bạn đã tiết kiệm được {(
-                        (cartTotal - subtotal) + discount
+                        (useCartStore.getState().cartTotal - subtotal) + couponDiscount
                       ).toLocaleString()}₫
                     </div>
                   )}
@@ -688,6 +639,7 @@ const CheckoutPage = () => {
         </div>
       </div>
     </div>
+      </>
   );
 };
 

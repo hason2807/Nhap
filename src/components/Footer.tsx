@@ -48,7 +48,6 @@ function Footer() {
                 <a href="#" className="hover:text-emerald-200 transition"><Instagram size={20} /></a>
               </div>
             </div>
-
           </div>
 
           {/* Bottom */}

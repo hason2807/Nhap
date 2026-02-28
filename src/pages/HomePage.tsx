@@ -1,18 +1,9 @@
-import { 
-  ArrowRight, 
-  Star, 
-  Users, 
-  Clock, 
-  Award, 
-  CheckCircle,
-  TrendingUp,
-  Globe,
-  BookOpen,
-  Target
+import { ArrowRight, Star, Users, Clock, Award, CheckCircle,TrendingUp,Globe,BookOpen,Target
 } from "lucide-react";
 import { Link } from "react-router";
 import { courses } from "../data/courses"; // Import dữ liệu courses
 import { generateCourseImage } from "../utils/imageGenerator"; // Import hàm generateCourseImage
+import bannerImage from "../assets/banner-Photoroom.png";
 
 const HomePage = () => {
   // Lấy 4 khóa học nổi bật từ dữ liệu courses (có thể thêm logic để lọc khóa học hot)
@@ -82,13 +73,16 @@ const HomePage = () => {
   ];
 
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-<section className="relative overflow-hidden bg-[#FAFAF8] py-20">
+      <>
+      <title>Home Page</title>
+      <meta name="description" content="Home Page" />
+    <div className="min-h-screen bg-white">
+    {/* Hero Section */}
+<section className="relative overflow-hidden py-20">
   <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
     <div className="grid lg:grid-cols-2 gap-12 items-center">
 
-      {/* Left content */}
+      {/* Left content - giữ nguyên */}
       <div>
         <h1 className="mb-6 text-4xl font-bold leading-tight text-gray-900 sm:text-5xl md:text-6xl">
           Học Kỹ Năng{" "}
@@ -122,43 +116,25 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Right card */}
-      <div>
-        <div className="rounded-2xl bg-white p-8 shadow-lg border border-gray-100">
-          <div className="mb-6 flex items-center gap-2">
+      {/* Right content - Banner */}
+      <div className="relative">
+      <img
+  src={bannerImage}
+  alt=""
+  className="w-full h-auto max-w-lg object-contain"
+/>
+        
+        {/* Optional: Thêm badge nhỏ nếu muốn */}
+        <div className="absolute -bottom-4 -left-4 bg-white rounded-lg shadow-lg p-4">
+          <div className="flex items-center gap-2">
             <div className="flex">
               {[1, 2, 3, 4, 5].map((i) => (
-                <Star
-                  key={i}
-                  className="h-5 w-5 fill-yellow-400 text-yellow-400"
-                />
+                <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
               ))}
             </div>
-            <span className="text-gray-700">
-              {averageRating.toFixed(1)}/5.0 từ{" "}
-              {totalStudents.toLocaleString()} đánh giá
+            <span className="text-sm font-medium">
+              {averageRating.toFixed(1)} ({totalStudents.toLocaleString()}+ học viên)
             </span>
-          </div>
-
-          <h3 className="mb-4 text-2xl font-bold text-gray-900">
-            Bắt Đầu Học Hôm Nay
-          </h3>
-
-          <div className="space-y-4">
-            {[
-              "Đảm bảo hoàn tiền 30 ngày",
-              "Học trên mọi thiết bị",
-              "Nhận chứng chỉ hoàn thành",
-              "Buổi hỏi đáp trực tiếp",
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                className="flex items-center gap-3 text-gray-700"
-              >
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span>{item}</span>
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -167,9 +143,8 @@ const HomePage = () => {
   </div>
 </section>
 
-
       {/* Stats Section */}
-      <section className="py-12 bg-gray-50">
+      <section className="py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, idx) => (
@@ -266,66 +241,48 @@ const HomePage = () => {
           </div>
         </div>
       </section>
-
-      {/* Categories Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl">
-              Duyệt Theo Danh Mục
-            </h2>
-            <p className="mx-auto max-w-2xl text-lg text-gray-600">
-              Khám phá các khóa học trong lĩnh vực bạn quan tâm
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-6">
-            {categories.map((category, idx) => (
-              <Link
-                key={idx}
-                to={`/courses?category=${category.name}`}
-                className={`group rounded-2xl ${category.color} p-6 text-center transition-all hover:scale-105 hover:shadow-lg`}
-              >
-                <div className="mb-4 text-3xl">{category.icon}</div>
-                <h3 className="mb-2 font-semibold">{category.name}</h3>
-                <p className="text-sm opacity-75">{category.count} Khóa học</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Features Section */}
-      <section className="py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl">
-              Tại Sao Chọn Nền Tảng Của Chúng Tôi
-            </h2>
-            <p className="mx-auto max-w-2xl text-lg text-gray-600">
-              Chúng tôi cam kết mang đến trải nghiệm học tập tốt nhất
+<section className="py-20">
+  <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+    <div className="grid items-center gap-12 lg:grid-cols-2">
+
+      {/* LEFT CONTENT */}
+      <div className="text-center lg:text-left">
+        <h2 className="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl">
+          Tại Sao Chọn Nền Tảng Của Chúng Tôi
+        </h2>
+        <p className="max-w-xl text-lg text-gray-600 mx-auto lg:mx-0">
+          Chúng tôi cam kết mang đến trải nghiệm học tập tốt nhất
+        </p>
+      </div>
+
+      {/* RIGHT FEATURES GRID */}
+      <div className="grid gap-8 sm:grid-cols-2">
+        {features.map((feature, idx) => (
+          <div
+            key={idx}
+            className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-lg"
+          >
+            <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+              {feature.icon}
+            </div>
+            <h3 className="mb-3 text-xl font-semibold">
+              {feature.title}
+            </h3>
+            <p className="text-gray-600">
+              {feature.description}
             </p>
           </div>
+        ))}
+      </div>
 
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature, idx) => (
-              <div
-                key={idx}
-                className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-lg"
-              >
-                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                  {feature.icon}
-                </div>
-                <h3 className="mb-3 text-xl font-semibold">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+    </div>
 
+  </div>
+</section>
       {/* CTA Section */}
-<section className="py-20 bg-[#FAFAF8]">
+<section className="py-20">
   <div className="mx-auto max-w-4xl px-4 text-center">
     <h2 className="mb-6 text-3xl font-bold text-gray-900 sm:text-4xl">
       Sẵn Sàng Bắt Đầu Hành Trình Học Tập?
@@ -356,6 +313,7 @@ const HomePage = () => {
 </section>
 
     </div>
+    </>
   );
 };
 
