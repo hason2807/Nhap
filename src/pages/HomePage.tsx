@@ -99,10 +99,6 @@ const HomePage = () => {
             Khám Phá Khóa Học
             <ArrowRight className="ml-2 h-5 w-5" />
           </Link>
-
-          <button className="inline-flex items-center justify-center rounded-lg border-2 border-green-700 px-8 py-3 text-lg font-semibold text-green-700 transition-all hover:bg-green-50">
-            Xem Demo
-          </button>
         </div>
       </div>
 
